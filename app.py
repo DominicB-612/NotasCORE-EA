@@ -73,7 +73,7 @@ rut_row = df.iloc[ROW_RUTS, COL_DATA_START:COL_DATA_END]
 
 # Common columns from row 7 onward
 label_df = df.iloc[ROW_DATA_START:, COL_COMMON].reset_index(drop=True)
-label_df.columns = ["Criterio A", "Criterio B", "Criterio C"]
+label_df.columns = ["Criterio", "Descripción", "Puntaje"]
 
 # ── UI ────────────────────────────────────────────────────────────────────────
 st.markdown("## 📋 Consulta de Rúbrica de Evaluación")
