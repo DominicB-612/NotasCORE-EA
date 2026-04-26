@@ -108,6 +108,7 @@ if rut_input:
 
         # Remove fully empty rows
         result = result.dropna(how="all")
+        result = result.fillna("")
 
         st.success(f"✅ RUT encontrado. Aquí está tu evaluación:")
 
