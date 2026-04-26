@@ -11,10 +11,7 @@ st.set_page_config(
 # ── Custom CSS ────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    /* Main background */
     .stApp { background-color: #f7f9fc; }
-
-    /* Card container */
     .card {
         background: white;
         border-radius: 16px;
@@ -22,56 +19,34 @@ st.markdown("""
         box-shadow: 0 4px 20px rgba(0,0,0,0.07);
         margin-top: 1.5rem;
     }
-
-    /* Table header */
-    thead tr th {
-        background-color: #2d6a9f !important;
-        color: white !important;
-        font-weight: 600;
-    }
-
-    /* Alternating rows */
-    tbody tr:nth-child(even) td { background-color: #eef4fb; }
-    tbody tr:nth-child(odd)  td { background-color: #ffffff; }
-
-    /* Input label */
     label { font-weight: 600 !important; }
-
-    /* Hide Streamlit branding */
     #MainMenu, footer { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
 # ── Load data ─────────────────────────────────────────────────────────────────
-EXCEL_FILE = "datos.xlsx"   # <-- pon aquí el nombre de tu archivo Excel
+EXCEL_FILE = "datos.xlsx"
 
 @st.cache_data
 def load_data():
-    # Read without headers so we control row indexing (0-based internally)
-    df = pd.read_excel(EXCEL_FILE, header=None)
+    df = pd.read_excel(EXCEL_FILE, header=None, dtype=str)
     return df
 
 try:
     df = load_data()
 except FileNotFoundError:
-    st.error(f"⚠️ No se encontró el archivo **{EXCEL_FILE}**. "
-             "Asegúrate de que esté en la misma carpeta que esta app.")
+    st.error(f"⚠️ No se encontró el archivo **{EXCEL_FILE}**.")
     st.stop()
 
 # ── Parse structure ───────────────────────────────────────────────────────────
-# Excel row 4  → DataFrame row index 3  (0-based)
-# Excel cols D–Y → pandas columns 3–24  (0-based: D=3, Y=24)
+ROW_RUTS       = 0
+ROW_DATA_START = 6
+COL_COMMON     = [0, 1, 2]
+COL_DATA_START = 3
+COL_DATA_END   = 25
 
-ROW_RUTS      = 0   # fila 1 de Excel (0-based)
-ROW_DATA_START = 6  # fila 7 de Excel (0-based)
-COL_COMMON     = [0, 1, 2]  # columnas A, B, C (0-based)
-COL_DATA_START = 3           # D (0-based)
-COL_DATA_END   = 25          # Y+1 (exclusive)
-
-# RUT row: columns D to Y
 rut_row = df.iloc[ROW_RUTS, COL_DATA_START:COL_DATA_END]
 
-# Common columns from row 7 onward
 label_df = df.iloc[ROW_DATA_START:, COL_COMMON].reset_index(drop=True)
 label_df.columns = ["Criterio", "Descripción", "Puntaje"]
 
@@ -86,10 +61,8 @@ rut_input = st.text_input(
 ).strip()
 
 if rut_input:
-    # Normalise: remove dots, uppercase K
     rut_clean = rut_input.replace(".", "").upper()
 
-    # Find matching column
     match_col = None
     for idx, val in rut_row.items():
         if str(val).replace(".", "").upper().strip() == rut_clean:
@@ -99,28 +72,40 @@ if rut_input:
     if match_col is None:
         st.error("❌ RUT no encontrado. Verifica que esté bien escrito.")
     else:
-        # Personal data: rows from row 7 onward, same column
         personal_data = df.iloc[ROW_DATA_START:, match_col].reset_index(drop=True)
 
-        # Build display table
         result = label_df.copy()
         result["Tu Evaluación"] = personal_data
 
-        # Remove fully empty rows
-        result = result.dropna(how="all")
-        result = result.fillna("")
+        # Limpiar "nan" y "None" que vienen del dtype=str
+        result = result.replace("nan", "").replace("None", "")
 
-        st.success(f"✅ RUT encontrado. Aquí está tu evaluación:")
+        # Eliminar filas donde TODAS las columnas estén vacías
+        result = result[~(result == "").all(axis=1)]
+
+        st.success("✅ RUT encontrado. Aquí está tu evaluación:")
+
+        def df_to_html(dataframe):
+            rows = ""
+            for _, row in dataframe.iterrows():
+                cells = "".join(
+                    f"<td style='padding:10px 14px; border-bottom:1px solid #e0e0e0; "
+                    f"vertical-align:top; white-space:normal; word-wrap:break-word;'>"
+                    f"{row[col]}</td>"
+                    for col in dataframe.columns
+                )
+                rows += f"<tr>{cells}</tr>"
+            headers = "".join(
+                f"<th style='padding:10px 14px; background:#2d6a9f; color:white; "
+                f"text-align:left; white-space:nowrap;'>{col}</th>"
+                for col in dataframe.columns
+            )
+            return (
+                f"<table style='width:100%; border-collapse:collapse; font-size:14px;'>"
+                f"<thead><tr>{headers}</tr></thead><tbody>{rows}</tbody></table>"
+            )
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        def df_to_html(df):
-            rows = ""
-            for _, row in df.iterrows():
-                cells = "".join(f"<td style='padding:8px 12px; border-bottom:1px solid #e0e0e0; vertical-align:top; white-space:normal; word-wrap:break-word;'>{row[col]}</td>" for col in df.columns)
-                rows += f"<tr>{cells}</tr>"
-            headers = "".join(f"<th style='padding:10px 12px; background:#2d6a9f; color:white; text-align:left; white-space:nowrap;'>{col}</th>" for col in df.columns)
-            return f"<table style='width:100%; border-collapse:collapse; font-size:14px;'><thead><tr>{headers}</tr></thead><tbody>{rows}</tbody></table>"
-
         st.markdown(df_to_html(result), unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
