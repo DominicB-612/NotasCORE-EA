@@ -1,62 +1,17 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 
-# ── Page config ───────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="Consulta de Rúbrica",
-    page_icon="📋",
-    layout="wide",
-)
+st.set_page_config(page_title="Consulta de Rúbrica", page_icon="📋", layout="wide")
 
-# ── Custom CSS ────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
     .stApp { background-color: #f7f9fc; }
-    .card {
-        background: white;
-        border-radius: 16px;
-        padding: 2rem 2.5rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.07);
-        margin-top: 1.5rem;
-    }
     label { font-weight: 600 !important; }
     #MainMenu, footer { visibility: hidden; }
-    table { border-collapse: collapse; width: 100%; font-size: 14px; }
-    thead th {
-        background-color: #2d6a9f;
-        color: white;
-        padding: 10px 14px;
-        text-align: left;
-        white-space: nowrap;
-    }
-    tbody tr:nth-child(even) td { background-color: #eef4fb; }
-    tbody tr:nth-child(odd)  td { background-color: #ffffff; }
-    tbody td {
-        padding: 10px 14px;
-        border-bottom: 1px solid #e0e0e0;
-        vertical-align: top;
-        white-space: normal;
-        word-wrap: break-word;
-    }
-    .score-cell {
-        font-weight: bold;
-        text-align: center;
-        font-size: 15px;
-    }
-    .nota-box {
-        background: #2d6a9f;
-        color: white;
-        border-radius: 12px;
-        padding: 1rem 2rem;
-        display: inline-block;
-        font-size: 1.4rem;
-        font-weight: bold;
-        margin-bottom: 1.5rem;
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Load data ─────────────────────────────────────────────────────────────────
 EXCEL_FILE = "datos.xlsx"
 
 @st.cache_data
@@ -69,30 +24,19 @@ except FileNotFoundError:
     st.error(f"⚠️ No se encontró el archivo **{EXCEL_FILE}**.")
     st.stop()
 
-# ── Parse structure ───────────────────────────────────────────────────────────
-# Row 0 (fila 1): RUTs en columnas D-Y (índices 3-24)
-# Row 4 (fila 5): NOTA final del estudiante
-# Row 5 (fila 6): PUNTAJE total del estudiante
-# Rows 6-62: Rúbrica. Filas con col A != nan son criterios principales.
-# Cols: A=criterio, B=descripción, C=puntaje máximo, D-Y=puntaje estudiante
-
-ROW_RUTS   = 0
-ROW_NOTA   = 4
-ROW_PUNTAJE = 5
+ROW_RUTS     = 0
+ROW_NOTA     = 4
+ROW_PUNTAJE  = 5
 RUBRIC_START = 6
 RUBRIC_END   = 63
 COL_DATA_START = 3
-COL_DATA_END   = 25
 
-rut_row = df.iloc[ROW_RUTS, COL_DATA_START:COL_DATA_END]
-
-# Criterion rows: filas donde col A tiene contenido
+rut_row = df.iloc[ROW_RUTS, COL_DATA_START:25]
 criterion_rows = [
     i for i in range(RUBRIC_START, RUBRIC_END)
     if str(df.iloc[i, 0]).strip() not in ("nan", "")
 ]
 
-# ── UI ────────────────────────────────────────────────────────────────────────
 st.markdown("## 📋 Consulta de Rúbrica de Evaluación")
 st.markdown("Ingresa tu RUT para ver tu evaluación.")
 
@@ -114,61 +58,59 @@ if rut_input:
     if match_col is None:
         st.error("❌ RUT no encontrado. Verifica que esté bien escrito.")
     else:
-        nota   = df.iloc[ROW_NOTA, match_col]
-        puntaje = df.iloc[ROW_PUNTAJE, match_col]
-
-        nota_str   = nota   if str(nota)   not in ("nan", "") else "—"
-        puntaje_str = puntaje if str(puntaje) not in ("nan", "") else "—"
+        nota    = str(df.iloc[ROW_NOTA, match_col]).strip()
+        puntaje = str(df.iloc[ROW_PUNTAJE, match_col]).strip()
+        if nota    == "nan": nota    = "—"
+        if puntaje == "nan": puntaje = "—"
 
         st.success("✅ RUT encontrado. Aquí está tu evaluación:")
 
-        st.markdown(
-            f"<div class='nota-box'>🎓 Nota: {nota_str} &nbsp;|&nbsp; Puntaje total: {puntaje_str}</div>",
-            unsafe_allow_html=True,
-        )
-
-        # Build table rows
         table_rows = ""
         for r in criterion_rows:
-            criterio   = str(df.iloc[r, 0]).strip()
+            criterio    = str(df.iloc[r, 0]).strip()
             descripcion = str(df.iloc[r, 1]).strip()
-            ptje_max   = str(df.iloc[r, 2]).strip()
-            ptje_est   = str(df.iloc[r, match_col]).strip()
+            ptje_max    = str(df.iloc[r, 2]).strip()
+            ptje_est    = str(df.iloc[r, match_col]).strip()
 
-            if criterio   == "nan": criterio   = ""
+            if criterio    == "nan": criterio    = ""
             if descripcion == "nan": descripcion = ""
-            if ptje_max   == "nan": ptje_max   = ""
-            if ptje_est   == "nan": ptje_est   = ""
+            if ptje_max    == "nan": ptje_max    = ""
+            if ptje_est    == "nan": ptje_est    = "—"
 
-            # Format score as X / MAX
-            score_display = f"{ptje_est} / {ptje_max}" if ptje_est else f"— / {ptje_max}"
+            score_display = f"{ptje_est} / {ptje_max}" if ptje_max else ptje_est
 
             table_rows += f"""
             <tr>
-                <td><strong>{criterio}</strong></td>
-                <td>{descripcion}</td>
-                <td class='score-cell'>{score_display}</td>
-            </tr>
-            """
+                <td style="font-weight:bold; width:15%; padding:10px 14px; border-bottom:1px solid #dde3ed; vertical-align:top;">{criterio}</td>
+                <td style="width:70%; padding:10px 14px; border-bottom:1px solid #dde3ed; vertical-align:top; white-space:normal; word-wrap:break-word;">{descripcion}</td>
+                <td style="width:15%; padding:10px 14px; border-bottom:1px solid #dde3ed; vertical-align:top; text-align:center; font-weight:bold; font-size:15px;">{score_display}</td>
+            </tr>"""
 
-        html_table = f"""
-        <table>
-            <thead>
-                <tr>
-                    <th style='width:15%'>Criterio</th>
-                    <th style='width:70%'>Descripción</th>
-                    <th style='width:15%'>Puntaje</th>
-                </tr>
-            </thead>
-            <tbody>
-                {table_rows}
-            </tbody>
-        </table>
+        html = f"""
+        <div style="font-family: sans-serif;">
+            <div style="background:#2d6a9f; color:white; border-radius:12px; padding:14px 24px;
+                        display:inline-block; font-size:1.3rem; font-weight:bold; margin-bottom:20px;">
+                🎓 Nota: {nota} &nbsp;|&nbsp; Puntaje total: {puntaje}
+            </div>
+            <div style="background:white; border-radius:16px; padding:24px 32px;
+                        box-shadow:0 4px 20px rgba(0,0,0,0.07);">
+                <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                    <thead>
+                        <tr>
+                            <th style="background:#2d6a9f; color:white; padding:10px 14px; text-align:left; width:15%;">Criterio</th>
+                            <th style="background:#2d6a9f; color:white; padding:10px 14px; text-align:left; width:70%;">Descripción</th>
+                            <th style="background:#2d6a9f; color:white; padding:10px 14px; text-align:center; width:15%;">Puntaje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {table_rows}
+                    </tbody>
+                </table>
+            </div>
+        </div>
         """
 
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown(html_table, unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        components.html(html, height=800, scrolling=True)
 
 else:
     st.info("👆 Ingresa tu RUT para comenzar.")
