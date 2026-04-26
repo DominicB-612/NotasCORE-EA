@@ -113,11 +113,15 @@ if rut_input:
         st.success(f"✅ RUT encontrado. Aquí está tu evaluación:")
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.dataframe(
-            result,
-            use_container_width=True,
-            hide_index=True,
-        )
+        def df_to_html(df):
+            rows = ""
+            for _, row in df.iterrows():
+                cells = "".join(f"<td style='padding:8px 12px; border-bottom:1px solid #e0e0e0; vertical-align:top; white-space:normal; word-wrap:break-word;'>{row[col]}</td>" for col in df.columns)
+                rows += f"<tr>{cells}</tr>"
+            headers = "".join(f"<th style='padding:10px 12px; background:#2d6a9f; color:white; text-align:left; white-space:nowrap;'>{col}</th>" for col in df.columns)
+            return f"<table style='width:100%; border-collapse:collapse; font-size:14px;'><thead><tr>{headers}</tr></thead><tbody>{rows}</tbody></table>"
+
+        st.markdown(df_to_html(result), unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
 else:
