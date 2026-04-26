@@ -62,17 +62,17 @@ except FileNotFoundError:
 # Excel row 4  → DataFrame row index 3  (0-based)
 # Excel cols D–Y → pandas columns 3–24  (0-based: D=3, Y=24)
 
-ROW_RUTS   = 3          # fila 4 de Excel (0-based)
-COL_COMMON = [0, 1, 2]  # columnas A, B, C (0-based)
-COL_DATA_START = 3      # D (0-based)
-COL_DATA_END   = 25     # Y+1 (exclusive)
+ROW_RUTS      = 0   # fila 1 de Excel (0-based)
+ROW_DATA_START = 6  # fila 7 de Excel (0-based)
+COL_COMMON     = [0, 1, 2]  # columnas A, B, C (0-based)
+COL_DATA_START = 3           # D (0-based)
+COL_DATA_END   = 25          # Y+1 (exclusive)
 
 # RUT row: columns D to Y
 rut_row = df.iloc[ROW_RUTS, COL_DATA_START:COL_DATA_END]
 
-# Common columns (all rows below row 4, i.e., from row 4 onward as data)
-# We'll show labels from rows 5+ (index 4+) in columns A-C
-label_df = df.iloc[ROW_RUTS + 1:, COL_COMMON].reset_index(drop=True)
+# Common columns from row 7 onward
+label_df = df.iloc[ROW_DATA_START:, COL_COMMON].reset_index(drop=True)
 label_df.columns = ["Criterio A", "Criterio B", "Criterio C"]
 
 # ── UI ────────────────────────────────────────────────────────────────────────
@@ -99,8 +99,8 @@ if rut_input:
     if match_col is None:
         st.error("❌ RUT no encontrado. Verifica que esté bien escrito.")
     else:
-        # Personal data: rows below row 4, same column
-        personal_data = df.iloc[ROW_RUTS + 1:, match_col].reset_index(drop=True)
+        # Personal data: rows from row 7 onward, same column
+        personal_data = df.iloc[ROW_DATA_START:, match_col].reset_index(drop=True)
 
         # Build display table
         result = label_df.copy()
