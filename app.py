@@ -5,7 +5,7 @@ import pandas as pd
 st.set_page_config(
     page_title="Consulta de Rúbrica",
     page_icon="📋",
-    layout="centered",
+    layout="wide",
 )
 
 # ── Custom CSS ────────────────────────────────────────────────────────────────
